@@ -11,13 +11,19 @@ using Microsoft.Extensions.Logging;
 
 namespace AddressProvider.Functions
 {
-    public class GetAddressFunction(ILogger<GetAddressFunction> logger, DataContext context)
+    public class GetAddressFunction
     {
-        private readonly ILogger<GetAddressFunction> _logger = logger;
+        private readonly ILogger<GetAddressFunction> _logger;
         private readonly GetAddressService _addressService;
 
+        public GetAddressFunction(ILogger<GetAddressFunction> logger, GetAddressService addressService)
+        {
+            _logger = logger;
+            _addressService = addressService ?? throw new ArgumentNullException(nameof(addressService));
+        }
+
         [Function("GetAddressFunction")]
-        public async Task <IActionResult> Run([HttpTrigger(AuthorizationLevel.Function, "get", Route = "user/{accountId}/addresses")] HttpRequest req, int accountId)
+        public async Task<IActionResult> Run([HttpTrigger(AuthorizationLevel.Function, "get", Route = "user/{accountId}/addresses")] HttpRequest req, int accountId)
         {
             try
             {
@@ -36,7 +42,6 @@ namespace AddressProvider.Functions
                 return new BadRequestObjectResult(ex.Message);
             }
         }
-       
     }
 
 }
