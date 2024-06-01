@@ -1,6 +1,7 @@
 using System;
 using System.Threading.Tasks;
 using AddressLibrary.Data.Context;
+using AddressProvider.Services;
 using Azure.Messaging.ServiceBus;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.EntityFrameworkCore;
@@ -12,11 +13,12 @@ namespace AddressProvider.Functions
     public class RemoveAllAddressesFunction
     {
         private readonly ILogger<RemoveAllAddressesFunction> _logger;
-        private readonly DataContext _context;
-        public RemoveAllAddressesFunction(ILogger<RemoveAllAddressesFunction> logger, DataContext context)
+        private readonly RemoveAllService _service;
+
+        public RemoveAllAddressesFunction(ILogger<RemoveAllAddressesFunction> logger, RemoveAllService service)
         {
             _logger = logger;
-            _context = context;
+            _service = service;
         }
 
         [Function(nameof(RemoveAllAddressesFunction))]
@@ -30,29 +32,20 @@ namespace AddressProvider.Functions
             {
                 var accountId = JsonConvert.DeserializeObject<int>(message);
 
-                if(accountId != 0)
+                if (accountId != 0)
                 {
-                    var addresses = await _context.Addresses
-                        .Where(a => a.AccountId == accountId)
-                        .ToListAsync();
-
-                    _context.Addresses.RemoveRange(addresses);
-                    await _context.SaveChangesAsync();
-
-                    _logger.LogInformation($"Deleted {addresses.Count} addresses for AccountId {accountId}");
+                    await _service.RemoveAllAddressesAsync(accountId);
                 }
                 else
                 {
                     _logger.LogWarning("Received invalid AccountId");
                 }
-
-
-
-            }catch (Exception ex)
+            }
+            catch (Exception ex)
             {
                 _logger.LogError(ex, "Error processing message");
             }
-           
+
         }
     }
 }

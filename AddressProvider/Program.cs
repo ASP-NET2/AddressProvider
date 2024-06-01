@@ -1,4 +1,5 @@
 using AddressLibrary.Data.Context;
+using AddressProvider.Services;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -11,6 +12,12 @@ var host = new HostBuilder()
         services.AddApplicationInsightsTelemetryWorkerService();
         services.ConfigureFunctionsApplicationInsights();
         services.AddDbContext<DataContext>(x => x.UseSqlServer(Environment.GetEnvironmentVariable("SqlServer")));
+        services.AddScoped<AddressService>();
+        services.AddScoped<DeleteService>();
+        services.AddScoped<GetOneService>();
+        services.AddScoped<GetAddressService>();
+        services.AddScoped<RemoveAllService>();
+        services.AddScoped<UpdateService>();
     })
     .Build();
 

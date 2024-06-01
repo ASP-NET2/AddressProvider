@@ -1,5 +1,6 @@
 using AddressLibrary.Data.Context;
 using AddressProvider.Models;
+using AddressProvider.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Functions.Worker;
@@ -10,10 +11,16 @@ using Newtonsoft.Json;
 
 namespace AddressProvider.Functions
 {
-    public class UpdateAddressFunction(ILogger<UpdateAddressFunction> logger, DataContext context)
+    public class UpdateAddressFunction
     {
-        private readonly ILogger<UpdateAddressFunction> _logger = logger;
-        private readonly DataContext _context = context;
+        private readonly ILogger<UpdateAddressFunction> _logger;
+        private readonly UpdateService _service;
+
+        public UpdateAddressFunction(ILogger<UpdateAddressFunction> logger, UpdateService service)
+        {
+            _logger = logger;
+            _service = service;
+        }
 
         [Function("UpdateAddressFunction")]
         public async Task <IActionResult> Run([HttpTrigger(AuthorizationLevel.Function, "put", Route ="addresses/{addressId}")] HttpRequest req, int addressId)
@@ -22,33 +29,24 @@ namespace AddressProvider.Functions
 
             try
             {
-                var existingAddress = await _context.Addresses.FirstOrDefaultAsync(x => x.AddressId == addressId);
-
-                if(existingAddress == null)
-                {
-                    _logger.LogWarning($"No address found with ID: {addressId}");
-                    return new NotFoundObjectResult("The address that you where looking for could not be found");
-                }
-
                 string requestBody = await new StreamReader(req.Body).ReadToEndAsync();
                 var updatedAddress = JsonConvert.DeserializeObject<UpdateAddressModel>(requestBody);
 
-                if(updatedAddress == null)
+                if (updatedAddress == null)
                 {
                     return new BadRequestObjectResult("Invalid data");
                 }
 
-                existingAddress.AddressTitle = updatedAddress.AddressTitle;
-                existingAddress.AddressLine_1 = updatedAddress.AddressLine_1;
-                existingAddress.PostalCode = updatedAddress.PostalCode;
-                existingAddress.City = updatedAddress.City;
+                var result = await _service.UpdateAddressAsync(addressId, updatedAddress);
 
-               _context.Addresses.Update(existingAddress);
-                _context.SaveChanges();
+                if (result == null)
+                {
+                    return new NotFoundObjectResult("The address that you were looking for could not be found");
+                }
 
-                return new OkObjectResult(updatedAddress);
-
-            }catch (Exception ex)
+                return new OkObjectResult(result);
+            }
+            catch (Exception ex)
             {
                 _logger.LogError(ex, "An error occurred while saving the entity changes.");
                 if (ex.InnerException != null)

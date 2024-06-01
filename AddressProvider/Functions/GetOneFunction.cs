@@ -1,4 +1,5 @@
 using AddressLibrary.Data.Context;
+using AddressProvider.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Functions.Worker;
@@ -10,12 +11,12 @@ namespace AddressProvider.Functions
     public class GetOneFunction
     {
         private readonly ILogger<GetOneFunction> _logger;
-        private readonly DataContext _context;
+        private readonly GetOneService _service;
 
-        public GetOneFunction(ILogger<GetOneFunction> logger, DataContext context)
+        public GetOneFunction(ILogger<GetOneFunction> logger, GetOneService service)
         {
             _logger = logger;
-            _context = context;
+            _service = service;
         }
 
         [Function("GetOneFunction")]
@@ -24,18 +25,16 @@ namespace AddressProvider.Functions
             _logger.LogInformation($"Recieved Request for this addressId{addressId}");
             try
             {
-                var address = await _context.Addresses.FirstOrDefaultAsync(x=> x.AddressId == addressId);
-                
-                if(address == null)
+                var address = await _service.GetAddressByIdAsync(addressId);
+
+                if (address == null)
                 {
-                    _logger.LogWarning($"No address found with Id: {addressId}");
                     return new NotFoundObjectResult("Address not found");
                 }
 
                 return new OkObjectResult(address);
-
-
-            }catch (Exception ex)
+            }
+            catch (Exception ex)
             {
                 _logger.LogError(ex, ex.Message);
                 return new BadRequestObjectResult(ex.Message);

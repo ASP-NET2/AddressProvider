@@ -2,6 +2,7 @@ using AddressLibrary.Data.Context;
 using AddressLibrary.Data.Entities;
 using AddressLibrary.Migrations;
 using AddressProvider.Models;
+using AddressProvider.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Functions.Worker;
@@ -13,21 +14,17 @@ namespace AddressProvider.Functions
     public class GetAddressFunction(ILogger<GetAddressFunction> logger, DataContext context)
     {
         private readonly ILogger<GetAddressFunction> _logger = logger;
-        private readonly DataContext _context = context;
+        private readonly GetAddressService _addressService;
 
         [Function("GetAddressFunction")]
         public async Task <IActionResult> Run([HttpTrigger(AuthorizationLevel.Function, "get", Route = "user/{accountId}/addresses")] HttpRequest req, int accountId)
         {
-            _logger.LogInformation($"Received request for addresses of user ID: {accountId}");
             try
             {
-               var addresses = await _context.Addresses
-                    .Where(a => a.AccountId == accountId)
-                .ToListAsync();
+                var addresses = await _addressService.GetAddressesByAccountIdAsync(accountId);
 
-                if(addresses == null || !addresses.Any())
+                if (addresses == null || !addresses.Any())
                 {
-                    _logger.LogError($"No addresses found for this user id{accountId}");
                     return new OkObjectResult(new List<AddressEntity>());
                 }
 

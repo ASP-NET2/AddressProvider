@@ -1,6 +1,7 @@
 using AddressLibrary.Data.Context;
 using AddressLibrary.Data.Entities;
 using AddressProvider.Models;
+using AddressProvider.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Functions.Worker;
@@ -11,10 +12,16 @@ using Newtonsoft.Json;
 
 namespace AddressProvider.Functions
 {
-    public class CreateAddressFunction(ILogger<CreateAddressFunction> logger, DataContext context)
+    public class CreateAddressFunction
     {
-        private readonly ILogger<CreateAddressFunction> _logger = logger;
-        private readonly DataContext _context = context;
+        private readonly ILogger<CreateAddressFunction> _logger ;
+        private readonly AddressService _addressService;
+
+        public CreateAddressFunction(ILogger<CreateAddressFunction> logger, AddressService addressService)
+        {
+            _logger = logger;
+            _addressService = addressService;
+        }
 
         [Function("CreateAddressFunction")]
         public async Task <IActionResult> Run([HttpTrigger(AuthorizationLevel.Function, "post", Route ="addresses")] HttpRequest req)
@@ -28,15 +35,7 @@ namespace AddressProvider.Functions
                     return new BadRequestObjectResult("Invalid address data");
                 }
 
-                var accountUser = await _context.AccountUser.FirstOrDefaultAsync(a => a.AccountId == data.AccountId);
-
-                if(accountUser == null)
-                {
-                    return new NotFoundObjectResult($"Did not find a user {accountUser}");
-                }
-
-                _context.Addresses.Add(data);
-                await _context.SaveChangesAsync();
+                var accountUser = await _addressService.CreateAddressAsync(data);
 
                 return new OkObjectResult(data);
 

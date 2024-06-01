@@ -1,4 +1,5 @@
 using AddressLibrary.Data.Context;
+using AddressProvider.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Functions.Worker;
@@ -9,12 +10,12 @@ namespace AddressProvider.Functions
     public class DeleteAddressFunction
     {
         private readonly ILogger<DeleteAddressFunction> _logger;
-        private readonly DataContext _context;
+        private readonly DeleteService _deleteService;
 
-        public DeleteAddressFunction(ILogger<DeleteAddressFunction> logger, DataContext context)
+        public DeleteAddressFunction(ILogger<DeleteAddressFunction> logger, DeleteService deleteService)
         {
             _logger = logger;
-            _context = context;
+            _deleteService = deleteService;
         }
 
         [Function("DeleteAddressFunction")]
@@ -24,14 +25,11 @@ namespace AddressProvider.Functions
 
             try
             {
-                var existingAddress = await _context.Addresses.FindAsync(addressId);
-                if(existingAddress == null)
+                var existingAddress = await _deleteService.DeleteAddressAsync(addressId);
+                if(!existingAddress)
                 {
                     return new NotFoundObjectResult("The address is not found");
                 }
-
-                _context.Addresses.Remove(existingAddress);
-                await _context.SaveChangesAsync();
 
                 return new OkObjectResult("The address deleted successfully");
             }
